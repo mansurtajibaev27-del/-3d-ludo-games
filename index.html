@@ -1,0 +1,144 @@
+
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2D Ludo</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#18202d;color:white;font-family:Arial;text-align:center;padding:15px}
+h2{margin:10px}
+#board{width:min(94vw,480px);aspect-ratio:1;margin:18px auto;display:grid;grid-template-columns:repeat(15,1fr);grid-template-rows:repeat(15,1fr);background:white;border:3px solid #fff}
+.cell{border:1px solid #c5c9ce;display:flex;align-items:center;justify-content:center;position:relative}
+.home{grid-column:span 6;grid-row:span 6;margin:0}
+.red{background:#f04444}.green{background:#24b96b}
+.yellow{background:#f5ce32}.blue{background:#3286f4}
+.base{background:white;margin:12%;border-radius:12%;display:grid;grid-template-columns:1fr 1fr;gap:8%;padding:12%;width:76%;height:76%}
+.pawn{border-radius:50%;border:2px solid #fff;box-shadow:0 2px 5px #555;cursor:pointer}
+.base .pawn{width:100%;height:100%}
+.track{background:#fff}
+.safe{font-size:clamp(8px,2.5vw,16px);color:#d9a900}
+.center{background:conic-gradient(#24b96b 0 25%,#3286f4 0 50%,#f5ce32 0 75%,#f04444 0)}
+button{border:0;border-radius:12px;padding:13px 22px;font-size:17px;font-weight:bold;margin:5px;cursor:pointer}
+#roll{background:#ffcf38;color:#222}
+#status{font-size:16px;margin:12px}
+#dice{font-size:35px}
+</style>
+</head>
+<body>
+<h2>🎲 2D LUDO</h2>
+<div id="status">Qizil o‘yinchi navbati</div>
+<div id="dice">🎲</div>
+<button id="roll">ZAR TASHLASH</button>
+<div id="board"></div>
+<p>Avval zar tashlang, keyin donangizni bosing.</p>
+
+<script>
+const board=document.getElementById('board');
+const colors=['red','green','yellow','blue'];
+const names=['Qizil','Yashil','Sariq','Ko‘k'];
+const homes=[
+ [0,0,'red'],[0,9,'green'],
+ [9,9,'yellow'],[9,0,'blue']
+];
+const path=[];
+for(let x=1;x<=5;x++)path.push([x,6]);
+for(let y=5;y>=0;y--)path.push([6,y]);
+for(let y=0;y<=5;y++)path.push([8,y]);
+for(let x=9;x<=14;x++)path.push([x,6]);
+for(let x=14;x>=9;x--)path.push([x,8]);
+for(let y=9;y<=14;y++)path.push([8,y]);
+for(let y=14;y>=9;y--)path.push([6,y]);
+for(let x=5;x>=0;x--)path.push([x,8]);
+while(path.length>52)path.pop();
+
+const cells=[];
+for(let y=0;y<15;y++){
+ for(let x=0;x<15;x++){
+  const c=document.createElement('div');
+  c.className='cell';
+  c.style.gridColumn=x+1;
+  c.style.gridRow=y+1;
+  board.appendChild(c);
+  cells.push({x,y,c});
+ }
+}
+homes.forEach(([x,y,color])=>{
+ const h=document.createElement('div');
+ h.className='home '+color;
+ h.style.gridColumn=(x+1)+' / span 6';
+ h.style.gridRow=(y+1)+' / span 6';
+ h.style.zIndex=1;
+ const base=document.createElement('div');
+ base.className='base';
+ for(let i=0;i<4;i++){
+  const p=document.createElement('div');
+  p.className='pawn '+color;
+  p.style.background=getColor(color);
+  base.appendChild(p);
+ }
+ h.appendChild(base);
+ board.appendChild(h);
+});
+path.forEach(([x,y],i)=>{
+ const c=cells.find(o=>o.x===x&&o.y===y);
+ if(c){
+  c.c.classList.add('track');
+  if([1,9,14,22,27,35,40,48].includes(i)){
+   c.c.innerHTML='★';c.c.classList.add('safe');
+  }
+ }
+});
+const center=document.createElement('div');
+center.className='cell center';
+center.style.gridColumn='7 / span 3';
+center.style.gridRow='7 / span 3';
+center.style.zIndex=2;
+board.appendChild(center);
+
+let player=0,dice=0,steps=[-1,-1,-1,-1];
+const tokens=[];
+function getColor(c){
+ return {red:'#f04444',green:'#24b96b',yellow:'#f5ce32',blue:'#3286f4'}[c];
+}
+function paint(){
+ document.getElementById('status').textContent=
+ names[player]+' o‘yinchi navbati'+(dice?' — '+dice+' tushdi':'');
+}
+function drawToken(){
+ document.querySelectorAll('.moving').forEach(e=>e.remove());
+ tokens.length=0;
+ steps.forEach((s,i)=>{
+  if(s<0)return;
+  const pos=path[s%path.length];
+  const cell=cells.find(o=>o.x===pos[0]&&o.y===pos[1]);
+  if(!cell)return;
+  const p=document.createElement('button');
+  p.className='pawn moving';
+  p.style.cssText='position:absolute;width:85%;height:85%;padding:0;margin:0;background:'+getColor(colors[i])+';z-index:5';
+  p.textContent='●';
+  p.style.color='white';
+  p.onclick=()=>{
+   if(i!==player||!dice)return;
+   steps[i]=(steps[i]+dice)%path.length;
+   const six=dice===6;
+   dice=0;
+   if(!six)player=(player+1)%4;
+   drawToken();paint();
+  };
+  cell.c.appendChild(p);
+  tokens.push(p);
+ });
+}
+document.getElementById('roll').onclick=()=>{
+ if(dice)return;
+ dice=Math.floor(Math.random()*6)+1;
+ document.getElementById('dice').textContent=
+ ['⚀','⚁','⚂','⚃','⚄','⚅'][dice-1];
+ paint();
+};
+paint();
+</script>
+</body>
+</html>
